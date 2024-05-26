@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import time
 import struct
-# import serial
+import serial
 '''
 # 全局定义段
 '''
@@ -22,8 +22,12 @@ upper_weight = np.array([179, 215, 92])
 # 3. 结构元素定义
 kernel = np.ones((7, 7), np.uint8)
 # 4. Serial Port Definition
-# serial_port = serial.Serial("/dev/ttyACM0", 115200, timeout=0.5)
-# serial_port_state = serial_port.is_open
+ports = serial.tools.list_ports.comports()
+for port, desc, hwid in sorted(ports):
+    # print(f"{port}: {desc} [{hwid}]")
+    if desc[:16] == "USB-SERIAL CH340":
+        serial_port = serial.Serial(port, 9600, timeout=0.5)
+serial_port_state = serial_port.is_open
 # 5. Capture Definition
 cap = cv2.VideoCapture(1)
 cap.set(10, -2)
@@ -52,7 +56,7 @@ while cap.isOpened():
     '''
     ret, color_image = cap.read()  
     if ret is True:
-        for i in range(5):
+        for i in range(6):
             """
                 图像处理段
             """
@@ -205,14 +209,30 @@ while cap.isOpened():
         for i in weight_dataPack:
             if i not in new_weight_dataPack:
                 new_weight_dataPack.append(i)
+        # 输出检测到的球体位置信息
+        StateMachine = [0,0,0,0,0]
         for data in new_weight_dataPack:
-            print(
-                data[0], data[1], data[2],end=','
-            )  # 输出检测到的球体位置信息   ######################################################################################## 打印所有
-        print("\n")
-        # weight_data = [weight_x, weight_y, weight_r]
-        # pack_data = struct.pack('<BBfffBB', 0xFF,0xFE, weight_data[0], weight_data[1], weight_data[2], 0xFE,0xFF)
-        # serial_port.write(pack_data)  # 将数据打包发送到串口
+            # print(
+            #     data[0], data[1], data[2],end=','
+            # )
+            if data[0]>300 and data[0]<330 and data[1]>200 and data[1]<230:
+                StateMachine[0]=1
+            if data[0]>300 and data[0]<330 and data[1]>200 and data[1]<230:
+                StateMachine[1]=1
+            if data[0]>300 and data[0]<330 and data[1]>200 and data[1]<230:
+                StateMachine[2]=1
+            if data[0]>300 and data[0]<330 and data[1]>200 and data[1]<230:
+                StateMachine[3]=1
+            if data[0]>300 and data[0]<330 and data[1]>200 and data[1]<230:
+                StateMachine[4]=1
+        # print(
+        #     StateMachine[0], StateMachine[1], StateMachine[2],StateMachine[3],StateMachine[4]
+        # )
+        # print("\n")
+        
+        pack_data = struct.pack('<BBfffffBB', 0xFF,0xFE, 
+                                StateMachine[0], StateMachine[1], StateMachine[2], StateMachine[3], StateMachine[4],0xFE,0xFF)
+        serial_port.write(pack_data)  # 将数据打包发送到串口
 
         key = cv2.waitKey(1)
         if key == 27:
